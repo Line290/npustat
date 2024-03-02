@@ -11,7 +11,6 @@ from datetime import datetime
 from blessed import Terminal
 from six.moves import cStringIO as StringIO
 
-from .ascend_dmi import GetCardStatusWithAscendDmi
 from .npu_smi import GetCardStatusWithNpuSmi
 
 IS_WINDOWS = "windows" in platform.platform().lower()
@@ -92,12 +91,12 @@ class Chip:
 
         # build one-line display information
         reps = ""
-        reps += "%(C1)s[{entry[chip_id]}]%(C0)s" + " "
+        # reps += "%(C1)s[{entry[chip_id]}]%(C0)s" + " "
         reps += "%(C1)s[{entry[device_id]:>{device_id_width}}]%(C0)s" + " "
         reps += "%(ChipHealth)s{entry[health]}%(C0)s" + ", "
         reps += "%(ChipName)s{entry[chip_name]:{chip_name_width}}%(C0)s" + " |"
         reps += "%(ChipTemp)s{entry[temperature]:>3}°C%(C0)s" + ", "
-        reps += "%(ChipAICore)s{entry[ai_core_usage]:>3} %%%(C0)s, "
+        reps += "%(ChipAICore)s{entry[ai_core_usage]:>3} %%%(C0)s" + " | "
         reps += "%(C1)s%(ChipMemU)s{entry[memory_used]:>5}%(C0)s" + " / " + "%(ChipMemT)s{entry[memory_total]:>5}%(C0)s"
 
         def _repr(v, none_value="??"):
@@ -171,19 +170,19 @@ class AtlasCard:
         colors = self.get_color()
 
         reps = ""
-        reps += "%(C1)s[{entry[card_id]}]%(C0)s" + ", "
-        reps += "%(CardType)s{entry[type]:{card_type_width}}%(C0)s, "
+        # reps += "%(C1)s[{entry[card_id]}]%(C0)s" + ", "
+        # reps += "%(CardType)s{entry[type]:{card_type_width}}%(C0)s, "
 
-        if self.show_power:
-            reps += "%(CardPower)s{entry[power]:>3}%(C0)s"
+        # if self.show_power:
+        #     reps += "%(CardPower)s{entry[power]:>3}%(C0)s"
 
-        def _repr(v, none_value="??"):
-            return none_value if v is None else v
+        # def _repr(v, none_value="??"):
+        #     return none_value if v is None else v
 
-        reps = reps % colors
-        reps = reps.format(entry={k: _repr(v) for k, v in self.entry.items()}, card_type_width=card_type_width)
-        fp.write(reps)
-        fp.write(self.eol_char)
+        # reps = reps % colors
+        # reps = reps.format(entry={k: _repr(v) for k, v in self.entry.items()}, card_type_width=card_type_width)
+        # fp.write(reps)
+        # fp.write(self.eol_char)
 
         # body
         for chip in self:
@@ -286,20 +285,21 @@ class AtlasCardCollection:
             fp.write("=" * title_len)
             fp.write(eol_char)
 
-        title = "%(C1)s[加速卡ID]%(C0)s" + ", "
-        title += "%(CardType)s加速卡类型%(C0)s, "
-        if self.show_power:
-            title += "%(CardPower)s功率%(C0)s"
-        title = title % self.title_colors
-        fp.write(title.strip())
-        fp.write(eol_char)
+        # title = "%(C1)s[加速卡ID]%(C0)s" + ", "
+        # title += "%(CardType)s加速卡类型%(C0)s, "
+        # if self.show_power:
+        #     title += "%(CardPower)s功率%(C0)s"
+        # title = title % self.title_colors
+        # fp.write(title.strip())
+        # fp.write(eol_char)
 
-        title = "%(C1)s[芯片ID]%(C0)s" + " "
+        title = ""
+        # title += "%(C1)s[芯片ID]%(C0)s" + " "
         title += "%(C1)s[DeviceID]%(C0)s" + " "
         title += "%(ChipHealth)sHealth%(C0)s" + ", "
-        title += "%(ChipName)s芯片名称%(C0)s" + " | "
+        title += "%(ChipName)s芯片名称%(C0)s" + " |"
         title += "%(ChipTemp)s温度%(C0)s" + ", "
-        title += "%(ChipAICore)sAICore%(C0)s, "
+        title += "%(ChipAICore)sAICore%(C0)s"+ " | "
         title += "%(C1)s%(ChipMemU)s内存%(C0)s"
         title = title % self.title_colors
         fp.write(title.strip())
@@ -382,12 +382,9 @@ class AtlasCardCollection:
         return s
 
 
-def new_query(has_ascend_dmi, *args, **kwargs):
+def new_query(*args, **kwargs):
     """Query the information of all the Atlas Card on local machine"""
 
-    if has_ascend_dmi:
-        version, card_entry_list = GetCardStatusWithAscendDmi().new_query()
-    else:
-        version, card_entry_list = GetCardStatusWithNpuSmi().new_query()
+    version, card_entry_list = GetCardStatusWithNpuSmi().new_query()
 
     return AtlasCardCollection(card_entry_list, version=version, *args, **kwargs)

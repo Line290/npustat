@@ -1,3 +1,4 @@
+# *Update for Ascend 910B3*
 # `npustat`
 
 一个能够简洁的显示华为atlas设备状态的命令行工具；

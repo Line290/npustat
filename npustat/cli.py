@@ -12,31 +12,24 @@ from .core import new_query
 from npustat import __version__
 
 
-def check_ascend_dmi():
-    """ 检测命令 ascend-dmi -i 是否能够正常工作 """
-    result = os.popen("ascend-dmi -i").read()
-    if len(result.strip()) <= 0:
-        return False
-    return True
-
-
 def check_npu_smi():
     """ 检测命令 npu-smi info 是否能够正常工作 """
     result = os.popen("npu-smi info").read()
     if len(result.strip()) <= 0:
         sys.stderr.write(f"命令: npu-smi info 不存在，请检查是否正确安装了toolkit，并且正确配置了环境变量\n")
         exit(1)
+    else:
+        return True
 
 
-def print_atlas_stat(has_ascend_dmi, json=False, debug=False, *args, **kwargs):
+def print_atlas_stat(json=False, debug=False, *args, **kwargs):
     """
     Display the Atlas query results into standard output.
     """
     try:
-        atlas_stat = new_query(has_ascend_dmi=has_ascend_dmi, *args, **kwargs)
+        atlas_stat = new_query(*args, **kwargs)
     except Exception as e:
-        sys.stderr.write("获取 Atlas 设备信息报错。请在参数中添加上 \"--debug\" 获取报错的详情信息；"
-                         "并将报错信息反馈到：https://github.com/wmc1992/atlas-stat\n")
+        sys.stderr.write("获取 Atlas 设备信息报错。请在参数中添加上 \"--debug\" 获取报错的详情信息.")
         if debug:
             try:
                 import traceback
@@ -51,7 +44,7 @@ def print_atlas_stat(has_ascend_dmi, json=False, debug=False, *args, **kwargs):
         atlas_stat.print_formatted(sys.stdout, **kwargs)
 
 
-def loop_atlas_stat(has_ascend_dmi, interval=1.0, *args, **kwargs):
+def loop_atlas_stat(interval=1.0, *args, **kwargs):
     term = Terminal()
 
     with term.fullscreen():
@@ -61,7 +54,7 @@ def loop_atlas_stat(has_ascend_dmi, interval=1.0, *args, **kwargs):
 
                 # Move cursor to (0, 0) but do not restore original cursor loc
                 print(term.move(0, 0), end="")
-                print_atlas_stat(has_ascend_dmi=has_ascend_dmi, eol_char=term.clear_eol + os.linesep, *args, **kwargs)
+                print_atlas_stat(eol_char=term.clear_eol + os.linesep, *args, **kwargs)
                 print(term.clear_eos, end="")
 
                 query_duration = time.time() - query_start
@@ -88,15 +81,15 @@ def main():
                         help="是否隐藏 title 信息；title 信息为对当前设备状态值各字段的说明；"
                              "默认展示 title 信息，配置该参数后 title 信息不再展示；")
 
-    parser.add_argument("--use-npu-smi", dest="use_npu_smi", action="store_true", default=False,
+    parser.add_argument("--use-npu-smi", dest="use_npu_smi", action="store_true", default=True,
                         help="使用命令\"npu-smi info\"获取当前设备状态值；"
                              "注意该命令无法获取到加速卡的实时功率信息；")
 
-    parser.add_argument("--show-power", dest="show_power", action="store_false", default=True,
+    parser.add_argument("--show-power", dest="show_power", action="store_false", default=False,
                         help="是否展示加速卡的功率信息，默认为展示；"
                              "配置了参数 \"--use-npu-smi\" 之后该参数无效；")
 
-    parser.add_argument("--compact", dest="compact", action="store_true", default=False,
+    parser.add_argument("--no-compact", dest="no_compact", action="store_true", default=False,
                         help="是否采用紧凑模式展示信息，默认为不采用；"
                              "紧凑模式下会去掉空白行及其他无意义的行，适用于加速卡较多，显示器较小，屏幕显示不下的情况；")
 
@@ -105,23 +98,18 @@ def main():
     parser.add_argument("-v", "--version", action="version", version=("npustat version: %s" % __version__))
     args = parser.parse_args()
 
-    # ---------------------------------------------------------------------------------------
-    # 命令 ascend-dmi 与命令 npu-smi 的区别：
-    #   1) 使用命令 ascend-dmi -i --format json 返回值为json格式，并且可获取到实时的功率信息，但是需
-    #      要用户正确安装了toolbox，并且命令 ascend-dmi -i 能够正常使用；
-    #   2) 使用命令 npu-smi info 获取基本信息，难点在于返回值不支持json，需要自己解析，不同的设备上
-    #      展示格式可能不同，解析上有比较大可能出错；同时该命令不能获取到每个加速卡的功率信息；
-    # ---------------------------------------------------------------------------------------
-    if not args.use_npu_smi and check_ascend_dmi():
-        has_ascend_dmi = True
+    # args.use_npu_smi = True
+    if check_npu_smi():
+        args.use_npu_smi = True
+
+    if args.no_compact:
+        args.compact = False
     else:
-        has_ascend_dmi = False
-        args.show_power = False  # npu-smi info 命令无法获取到加速卡的功率信息，设置为不展示
-    if not has_ascend_dmi:
-        check_npu_smi()
+        args.compact = True
+    
+    # args.show_power = False  # npu-smi info 命令无法获取到加速卡的功率信息，设置为不展示
 
     if args.compact:
-        args.no_header = True
         args.no_title = True
 
     if args.interval is None:  # with default value
@@ -132,10 +120,10 @@ def main():
             sys.stderr.write("Error: \"--json\" 和 \"-i/--interval/--watch\" 不能同时使用；\n")
             sys.exit(1)
 
-        loop_atlas_stat(**vars(args), has_ascend_dmi=has_ascend_dmi)
+        loop_atlas_stat(**vars(args))
     else:
         del args.interval
-        print_atlas_stat(**vars(args), has_ascend_dmi=has_ascend_dmi)
+        print_atlas_stat(**vars(args))
 
 
 if __name__ == "__main__":
