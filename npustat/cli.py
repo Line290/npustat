@@ -71,7 +71,7 @@ def main():
                         help="将所有结果输出为JSON格式；")
 
     parser.add_argument("-i", "--interval", "--watch", nargs="?", type=float, default=0,
-                        help="动态刷新模式；INTERVAL为刷新间隔，单位：秒；默认每2秒刷新一次；")
+                        help="动态刷新模式；INTERVAL为刷新间隔，单位：秒；默认每1秒刷新一次；")
 
     parser.add_argument("--no-header", dest="no_header", action="store_true", default=False,
                         help="是否隐藏 header 信息；header 信息包含机器名称、当前时间、版本号；"
@@ -113,7 +113,7 @@ def main():
         args.no_title = True
 
     if args.interval is None:  # with default value
-        args.interval = 2.0  # 默认每2秒刷新一次
+        args.interval = 1.0  # 默认每1秒刷新一次
     if args.interval > 0:
         args.interval = max(0.1, args.interval)
         if args.json:
