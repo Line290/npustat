@@ -213,7 +213,7 @@ class GetCardStatusWithNpuSmi:
             my_class = self.version2func["default"]()
 
         entry_list = my_class.get_card_entry(atlas_card_info)
-        return f"npu-smi version : {version}", entry_list
+        return f"{version}", entry_list
 
     def get_version(self, atlas_card_info):
         result_list = []
